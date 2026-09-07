@@ -29,15 +29,14 @@ const ROUTES = [
     "success_status": 200,
     "sample_body": null,
     "response_keys": [
-      "cook_time",
-      "created_at",
+      "cook_time_minutes",
       "description",
       "id",
       "image_url",
       "ingredients",
-      "instructions",
-      "prep_time",
+      "prep_time_minutes",
       "servings",
+      "steps",
       "title"
     ],
     "expects_json": true
@@ -46,16 +45,6 @@ const ROUTES = [
     "method": "GET",
     "path": "/api/grocery-list",
     "request_path": "/api/grocery-list",
-    "auth_required": false,
-    "success_status": 200,
-    "sample_body": null,
-    "response_keys": [],
-    "expects_json": true
-  },
-  {
-    "method": "GET",
-    "path": "/api/grocery-list/clear-checked",
-    "request_path": "/api/grocery-list/clear-checked",
     "auth_required": false,
     "success_status": 200,
     "sample_body": null,
@@ -74,8 +63,8 @@ const ROUTES = [
   },
   {
     "method": "GET",
-    "path": "/api/grocery-list/from-recipe/:recipeId",
-    "request_path": "/api/grocery-list/from-recipe/1",
+    "path": "/api/grocery-list/generate",
+    "request_path": "/api/grocery-list/generate",
     "auth_required": false,
     "success_status": 200,
     "sample_body": null,

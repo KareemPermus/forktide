@@ -1,12 +1,14 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import apiClient from '@/api/client';
-import { Recipe } from '@/types';
 import Link from 'next/link';
-import { FiClock, FiUsers, FiArrowLeft, FiShoppingCart } from 'react-icons/fi';
+import { Recipe, RecipeIngredient, RecipeStep } from '@/types';
+import { motion } from 'framer-motion';
+import styles from '@/styles/RecipeDetail.module.css';
 
 interface RecipeDetail extends Recipe {
-  ingredients?: { id: number; name: string; quantity: string; unit: string }[];
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
 }
 
 export default function RecipeDetailPage() {
@@ -17,6 +19,7 @@ export default function RecipeDetailPage() {
   const [error, setError] = useState('');
   const [addingToGrocery, setAddingToGrocery] = useState(false);
   const [grocerySuccess, setGrocerySuccess] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -28,124 +31,132 @@ export default function RecipeDetailPage() {
   }, [id]);
 
   const handleAddToGrocery = async () => {
-    if (!id) return;
+    if (!recipe) return;
     setAddingToGrocery(true);
+    setGrocerySuccess(false);
     try {
-      await apiClient.post(`/api/grocery-list/from-recipe/${id}`);
+      await apiClient.post('/api/grocery-list/generate', { recipe_ids: [recipe.id] });
       setGrocerySuccess(true);
       setTimeout(() => setGrocerySuccess(false), 3000);
     } catch {
-      setError('Failed to add ingredients to grocery list.');
+      // silent
     } finally {
       setAddingToGrocery(false);
     }
   };
 
+  const handleDelete = async () => {
+    if (!recipe || !confirm('Delete this recipe?')) return;
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/api/recipes/${recipe.id}`);
+      router.push('/recipes');
+    } catch {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-stone-200 border-t-emerald-500 rounded-full animate-spin" />
+      <div className={styles.loadingWrap}>
+        <div className={styles.spinner} />
+        <p className={styles.loadingText}>Loading recipe…</p>
       </div>
     );
   }
 
-  if (error && !recipe) {
+  if (error || !recipe) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-red-500 mb-4">{error}</p>
-        <Link href="/recipes" className="text-emerald-600 hover:underline text-sm font-medium">← Back to Recipes</Link>
+      <div className={styles.errorWrap}>
+        <p className={styles.errorText}>{error || 'Recipe not found.'}</p>
+        <Link href="/recipes" className={styles.backLink}>← Back to recipes</Link>
       </div>
     );
   }
 
-  if (!recipe) return null;
-
-  const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
+  const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Link href="/recipes" className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-emerald-600 mb-6">
-        <FiArrowLeft className="w-4 h-4" /> Back to Recipes
-      </Link>
+    <div className={styles.page}>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <Link href="/recipes" className={styles.backLink}>← Back to recipes</Link>
 
-      {/* Header */}
-      <div className="bg-white rounded-xl border border-stone-200 overflow-hidden mb-6">
-        {recipe.image_url && (
-          <img src={recipe.image_url} alt={recipe.title} className="w-full h-56 object-cover" />
-        )}
-        <div className="p-6">
-          <h1 className="text-2xl font-extrabold tracking-tight text-stone-800">{recipe.title}</h1>
-          {recipe.description && <p className="text-stone-500 text-sm mt-2">{recipe.description}</p>}
-
-          <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-stone-500">
-            {recipe.prep_time != null && (
-              <span className="flex items-center gap-1"><FiClock className="w-4 h-4" /> Prep: {recipe.prep_time}m</span>
-            )}
-            {recipe.cook_time != null && (
-              <span className="flex items-center gap-1"><FiClock className="w-4 h-4" /> Cook: {recipe.cook_time}m</span>
-            )}
-            {totalTime > 0 && (
-              <span className="font-semibold text-stone-700">Total: {totalTime}m</span>
-            )}
-            {recipe.servings != null && (
-              <span className="flex items-center gap-1"><FiUsers className="w-4 h-4" /> {recipe.servings} servings</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Ingredients */}
-        <div className="bg-white rounded-xl border border-stone-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-sm uppercase tracking-wide text-stone-500">Ingredients</h2>
-            <button
-              onClick={handleAddToGrocery}
-              disabled={addingToGrocery}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
-            >
-              <FiShoppingCart className="w-3.5 h-3.5" />
-              {addingToGrocery ? 'Adding…' : 'Add to List'}
-            </button>
-          </div>
-          {grocerySuccess && (
-            <p className="text-xs text-emerald-600 font-medium mb-3">✓ Added to grocery list!</p>
+        {/* Hero */}
+        <div className={styles.hero}>
+          {recipe.image_url && (
+            <img src={recipe.image_url} alt={recipe.title} className={styles.heroImg} />
           )}
-          {recipe.ingredients && recipe.ingredients.length > 0 ? (
-            <ul className="space-y-2">
-              {recipe.ingredients.map(ing => (
-                <li key={ing.id} className="flex items-baseline gap-2 text-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                  <span>
-                    {ing.quantity && <span className="font-semibold">{ing.quantity}</span>}
-                    {ing.unit && <span className="text-stone-400"> {ing.unit}</span>}
-                    {' '}{ing.name}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-stone-400">No ingredients listed.</p>
-          )}
-        </div>
-
-        {/* Instructions */}
-        <div className="md:col-span-2 bg-white rounded-xl border border-stone-200 p-5">
-          <h2 className="font-bold text-sm uppercase tracking-wide text-stone-500 mb-4">Instructions</h2>
-          <div className="prose prose-sm prose-stone max-w-none">
-            {recipe.instructions.split('\n').filter(Boolean).map((step, i) => (
-              <div key={i} className="flex gap-3 mb-4">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center mt-0.5">
-                  {i + 1}
-                </span>
-                <p className="text-sm text-stone-700 leading-relaxed">{step}</p>
-              </div>
-            ))}
+          <div className={styles.heroContent}>
+            <h1 className={styles.title}>{recipe.title}</h1>
+            {recipe.description && <p className={styles.description}>{recipe.description}</p>}
+            <div className={styles.metaRow}>
+              {recipe.prep_time_minutes != null && (
+                <span className={styles.metaChip}>🔪 Prep {recipe.prep_time_minutes}m</span>
+              )}
+              {recipe.cook_time_minutes != null && (
+                <span className={styles.metaChip}>🔥 Cook {recipe.cook_time_minutes}m</span>
+              )}
+              {totalTime > 0 && (
+                <span className={styles.metaChip}>⏱ Total {totalTime}m</span>
+              )}
+              {recipe.servings != null && (
+                <span className={styles.metaChip}>🍽 {recipe.servings} servings</span>
+              )}
+            </div>
+            <div className={styles.actions}>
+              <button onClick={handleAddToGrocery} disabled={addingToGrocery} className={styles.primaryBtn}>
+                {addingToGrocery ? 'Adding…' : grocerySuccess ? '✓ Added!' : '🛒 Add to Grocery List'}
+              </button>
+              <button onClick={handleDelete} disabled={deleting} className={styles.deleteBtn}>
+                {deleting ? 'Deleting…' : '🗑 Delete'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+        {/* Content grid */}
+        <div className={styles.grid}>
+          {/* Ingredients */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Ingredients</h2>
+            {recipe.ingredients && recipe.ingredients.length > 0 ? (
+              <ul className={styles.ingredientList}>
+                {recipe.ingredients.map(ing => (
+                  <li key={ing.id} className={styles.ingredientItem}>
+                    <span className={styles.dot} />
+                    <span>
+                      {ing.quantity && <strong>{ing.quantity}</strong>}
+                      {ing.unit && ` ${ing.unit}`}
+                      {' '}{ing.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.empty}>No ingredients listed.</p>
+            )}
+          </div>
+
+          {/* Steps */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Instructions</h2>
+            {recipe.steps && recipe.steps.length > 0 ? (
+              <ol className={styles.stepList}>
+                {recipe.steps
+                  .sort((a, b) => a.step_number - b.step_number)
+                  .map(step => (
+                    <li key={step.id} className={styles.stepItem}>
+                      <span className={styles.stepNum}>{step.step_number}</span>
+                      <p>{step.instruction}</p>
+                    </li>
+                  ))}
+              </ol>
+            ) : (
+              <p className={styles.empty}>No steps listed.</p>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

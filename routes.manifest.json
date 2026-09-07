@@ -24,15 +24,14 @@
     "method": "GET",
     "path": "/api/recipes/:id",
     "response_shape": {
-      "cook_time": "int",
-      "created_at": "string",
+      "cook_time_minutes": "int",
       "description": "string",
       "id": "int",
       "image_url": "string",
       "ingredients": "array",
-      "instructions": "string",
-      "prep_time": "int",
+      "prep_time_minutes": "int",
       "servings": "int",
+      "steps": "array",
       "title": "string"
     },
     "sample_body": null,
@@ -53,16 +52,6 @@
   {
     "auth_required": false,
     "method": "GET",
-    "path": "/api/grocery-list/clear-checked",
-    "request_body": null,
-    "response_shape": null,
-    "sample_body": null,
-    "sample_params": null,
-    "success_status": 200
-  },
-  {
-    "auth_required": false,
-    "method": "GET",
     "path": "/api/grocery-list/:id",
     "request_body": null,
     "response_shape": null,
@@ -75,13 +64,11 @@
   {
     "auth_required": false,
     "method": "GET",
-    "path": "/api/grocery-list/from-recipe/:recipeId",
+    "path": "/api/grocery-list/generate",
     "request_body": null,
     "response_shape": null,
     "sample_body": null,
-    "sample_params": {
-      "recipeId": 1
-    },
+    "sample_params": null,
     "success_status": 200
   }
 ]

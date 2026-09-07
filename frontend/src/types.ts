@@ -3,10 +3,9 @@ export interface Recipe {
   title: string;
   description?: string;
   image_url?: string;
-  prep_time?: number;
-  cook_time?: number;
+  prep_time_minutes?: number;
+  cook_time_minutes?: number;
   servings?: number;
-  instructions: string;
   created_at: string;
 }
 
@@ -18,6 +17,13 @@ export interface RecipeIngredient {
   unit?: string;
 }
 
+export interface RecipeStep {
+  id: number;
+  recipe_id: number;
+  step_number: number;
+  instruction: string;
+}
+
 export interface GroceryItem {
   id: number;
   name: string;
@@ -25,29 +31,9 @@ export interface GroceryItem {
   unit?: string;
   checked: boolean;
   recipe_id?: number;
-  created_at: string;
 }
 
-export interface RecipeWithIngredients extends Recipe {
+export interface RecipeDetail extends Recipe {
   ingredients: Omit<RecipeIngredient, 'recipe_id'>[];
-}
-
-export interface RecipeListItem {
-  id: number;
-  title: string;
-  description: string;
-  image_url: string;
-  prep_time: number;
-  cook_time: number;
-  servings: number;
-  created_at: string;
-}
-
-export interface DeleteResponse {
-  success: boolean;
-}
-
-export interface ClearCheckedResponse {
-  success: boolean;
-  deleted_count: number;
+  steps: Omit<RecipeStep, 'recipe_id'>[];
 }

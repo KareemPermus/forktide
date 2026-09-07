@@ -1,136 +1,110 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import apiClient from '@/api/client';
-import { Recipe, GroceryItem } from '@/types';
-import { FiBookOpen, FiShoppingCart, FiClock, FiUsers } from 'react-icons/fi';
+import { Recipe } from '@/types';
+import { Clock, Utensils, ShoppingBasket, Flame, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import styles from '@/components/HomePage.module.css';
 
 export default function Home() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get('/api/recipes').then(r => r.data).catch(() => []),
-      apiClient.get('/api/grocery-list').then(r => r.data).catch(() => []),
-    ])
-      .then(([r, g]) => {
-        setRecipes(Array.isArray(r) ? r : []);
-        setGroceryItems(Array.isArray(g) ? g : []);
-      })
-      .catch(() => setError('Failed to load data'))
+    apiClient.get('/api/recipes')
+      .then(res => setRecipes(res.data))
+      .catch(() => setError('Failed to load recipes'))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-stone-200 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="text-center py-20 text-red-500">{error}</div>;
-  }
-
-  const uncheckedGrocery = groceryItems.filter(i => !i.checked).length;
-  const checkedGrocery = groceryItems.filter(i => i.checked).length;
-  const totalPrepTime = recipes.reduce((s, r) => s + (r.prep_time || 0), 0);
-  const totalServings = recipes.reduce((s, r) => s + (r.servings || 0), 0);
-
   const stats = [
-    { label: 'Total Recipes', value: recipes.length, icon: <FiBookOpen className="w-5 h-5" />, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'Grocery Items', value: `${uncheckedGrocery}`, sub: checkedGrocery > 0 ? `${checkedGrocery} checked` : undefined, icon: <FiShoppingCart className="w-5 h-5" />, color: 'text-amber-600 bg-amber-50' },
-    { label: 'Total Prep Time', value: `${totalPrepTime}m`, icon: <FiClock className="w-5 h-5" />, color: 'text-indigo-600 bg-indigo-50' },
-    { label: 'Total Servings', value: totalServings, icon: <FiUsers className="w-5 h-5" />, color: 'text-rose-600 bg-rose-50' },
+    { icon: Utensils, label: 'Total Recipes', value: recipes.length, sub: 'in your library', color: '#10b981' },
+    { icon: ShoppingBasket, label: 'Grocery Items', value: '—', sub: 'Check grocery list', color: '#f59e0b' },
+    { icon: Flame, label: 'Avg. Prep Time', value: recipes.length ? Math.round(recipes.reduce((a, r) => a + (r.prep_time_minutes || 0), 0) / recipes.length) + 'm' : '—', sub: 'across recipes', color: '#f43f5e' },
+    { icon: Clock, label: 'Avg. Cook Time', value: recipes.length ? Math.round(recipes.reduce((a, r) => a + (r.cook_time_minutes || 0), 0) / recipes.length) + 'm' : '—', sub: 'across recipes', color: '#3b82f6' },
   ];
 
-  const recentRecipes = recipes.slice(0, 6);
+  const featured = recipes.slice(0, 4);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={styles.page}>
+      <div className={styles.header}>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-stone-800">Dashboard</h1>
-          <p className="text-stone-500 text-sm mt-1">Welcome to Forktide — your meal planner</p>
+          <h1 className={styles.title}>Good morning, Chef 👋</h1>
+          <p className={styles.subtitle}>Here&apos;s what&apos;s cooking today.</p>
         </div>
-        <Link href="/recipes" className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 inline-flex items-center gap-2">
-          <FiBookOpen className="w-4 h-4" /> Browse Recipes
+        <Link href="/recipes" className={styles.ctaBtn}>
+          Browse Recipes <ChevronRight size={16} />
         </Link>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-stone-200 p-4 flex items-center justify-between">
+      <section className={styles.statsGrid}>
+        {stats.map((s, i) => (
+          <motion.div key={i} className={styles.statCard} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+            <div className={styles.statIcon} style={{ background: s.color + '18', color: s.color }}>
+              <s.icon size={18} />
+            </div>
             <div>
-              <p className="text-stone-400 text-xs font-medium">{s.label}</p>
-              <p className="text-2xl font-extrabold mt-1">
-                {s.value}
-                {s.sub && <span className="text-sm font-medium text-stone-400 ml-1">/ {s.sub}</span>}
-              </p>
+              <div className={styles.statLabel}>{s.label}</div>
+              <div className={styles.statValue}>{s.value}</div>
+              <div className={styles.statSub}>{s.sub}</div>
             </div>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${s.color}`}>
-              {s.icon}
-            </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </section>
 
-      {/* Recent Recipes */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-stone-800">Recent Recipes</h2>
-          <Link href="/recipes" className="text-emerald-600 text-sm font-medium hover:underline">View all →</Link>
+      {loading && <p className={styles.loadingText}>Loading recipes…</p>}
+      {error && <p className={styles.errorText}>{error}</p>}
+
+      {!loading && !error && (
+        <section>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Suggested for you</h2>
+            <Link href="/recipes" className={styles.viewAll}>Browse all <ChevronRight size={14} /></Link>
+          </div>
+
+          {featured.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p>No recipes yet. <Link href="/recipes" className={styles.link}>Add your first recipe!</Link></p>
+            </div>
+          ) : (
+            <div className={styles.recipeGrid}>
+              {featured.map((r, i) => (
+                <motion.div key={r.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                  <Link href={`/recipes/${r.id}`} className={styles.recipeCard}>
+                    {r.image_url ? (
+                      <img src={r.image_url} alt={r.title} className={styles.recipeImg} />
+                    ) : (
+                      <div className={styles.recipeImgPlaceholder}><Utensils size={24} /></div>
+                    )}
+                    <div className={styles.recipeBody}>
+                      <div className={styles.recipeMeta}>
+                        <Clock size={12} /> {(r.prep_time_minutes || 0) + (r.cook_time_minutes || 0)} min · {r.servings || '?'} servings
+                      </div>
+                      <div className={styles.recipeTitle}>{r.title}</div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className={styles.quickActions}>
+        <h2 className={styles.sectionTitle}>Quick Actions</h2>
+        <div className={styles.actionGrid}>
+          <Link href="/recipes" className={styles.actionCard}>
+            <Utensils size={20} /> <span>View Recipes</span>
+          </Link>
+          <Link href="/grocery-list" className={styles.actionCard}>
+            <ShoppingBasket size={20} /> <span>Grocery List</span>
+          </Link>
         </div>
-        {recentRecipes.length === 0 ? (
-          <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-            <p className="text-stone-400 mb-3">No recipes yet</p>
-            <Link href="/recipes" className="text-emerald-600 font-medium hover:underline">Add your first recipe</Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentRecipes.map(recipe => (
-              <Link key={recipe.id} href={`/recipes/${recipe.id}`} className="bg-white rounded-xl border border-stone-200 p-4 hover:shadow-md transition-shadow block">
-                {recipe.image_url && (
-                  <img src={recipe.image_url} alt={recipe.title} className="w-full h-36 object-cover rounded-lg mb-3" />
-                )}
-                <h3 className="font-semibold text-stone-800 leading-tight">{recipe.title}</h3>
-                {recipe.description && <p className="text-xs text-stone-400 mt-1 line-clamp-2">{recipe.description}</p>}
-                <div className="flex gap-3 mt-2 text-xs text-stone-500">
-                  {recipe.prep_time != null && <span className="flex items-center gap-1"><FiClock className="w-3 h-3" /> {recipe.prep_time}m prep</span>}
-                  {recipe.cook_time != null && <span>{recipe.cook_time}m cook</span>}
-                  {recipe.servings != null && <span>{recipe.servings} servings</span>}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+      </section>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link href="/grocery-list" className="bg-white rounded-xl border border-stone-200 p-5 hover:shadow-md transition-shadow flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
-            <FiShoppingCart className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="font-semibold text-stone-800">Grocery List</p>
-            <p className="text-xs text-stone-400">{uncheckedGrocery} items to buy</p>
-          </div>
-        </Link>
-        <Link href="/recipes" className="bg-white rounded-xl border border-stone-200 p-5 hover:shadow-md transition-shadow flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <FiBookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="font-semibold text-stone-800">Recipe Library</p>
-            <p className="text-xs text-stone-400">{recipes.length} recipes saved</p>
-          </div>
-        </Link>
-      </div>
+      <footer className={styles.footer}>Forktide · Plan smarter, eat better.</footer>
     </div>
   );
 }
